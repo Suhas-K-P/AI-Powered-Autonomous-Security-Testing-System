@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+reports/*.md
+reports/*.json
+.venv/
+venv/
+ 
