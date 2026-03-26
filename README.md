@@ -1,7 +1,23 @@
 # 🔐 AI-Powered Autonomous Security Testing System
 
-> Multi-agent security testing system built with FastAPI + Anthropic Claude.  
-> **For educational and portfolio use only. Only tests your own local vulnerable app.**
+> Multi-agent autonomous security scanner built with **FastAPI + Google Gemini AI (free)**.  
+> 4 AI agents collaborate to crawl, attack, analyze, and report vulnerabilities.  
+> **For educational and portfolio use only. Only tests your own local app.**
+
+---
+
+## 🌐 URLs — Open These In Your Browser
+
+| What | URL | Description |
+|------|-----|-------------|
+| 🎯 Vulnerable Target App | **http://localhost:9999** | The fake app your agents will hack |
+| 📋 Login page (SQLi) | http://localhost:9999/login | Try: username `admin' --` password `anything` |
+| 🔍 Search page (XSS) | http://localhost:9999/search | Try: `<script>alert('XSS')</script>` |
+| 💬 Comments (Stored XSS) | http://localhost:9999/comments | Try: `<img src=x onerror=alert('hi')>` |
+| 🔧 Admin panel (no auth) | http://localhost:9999/admin | Just visit — no login needed |
+| 👥 Users API (leaks passwords) | http://localhost:9999/api/users | Returns all users + plaintext passwords |
+| 🤖 Security API Swagger UI | **http://localhost:8000/docs** | Run your AI scan from here |
+| ❤️ Health check | http://localhost:8000/health | Confirm security API is running |
 
 ---
 
@@ -10,83 +26,94 @@
 ```
 security_project/
 │
-├── .env                          ← Your API key goes here (never commit this)
-├── .gitignore
-├── requirements.txt
+├── .env                              ← ⚠️ Your Gemini API key goes here
+├── .gitignore                        ← Ignores .env so key never leaks to GitHub
+├── requirements.txt                  ← All Python dependencies
+├── test_setup.py                     ← Run this to verify everything works
+├── start_windows.bat                 ← Double-click to start both servers (Windows)
+├── start_unix.sh                     ← Run to start both servers (Mac/Linux)
 │
-├── vulnerable_app/               ← PHASE 1: The intentionally vulnerable target
-│   ├── main.py                   ← FastAPI app with 8 vulnerabilities built in
-│   ├── database.py               ← SQLite setup + seed data
-│   └── templates/                ← HTML pages
+├── vulnerable_app/                   ← The intentionally hackable target website
+│   ├── main.py                       ← FastAPI app with 8 real vulnerabilities
+│   ├── database.py                   ← SQLite setup + seed users/products
+│   └── templates/
 │       ├── home.html
-│       ├── login.html            ← SQL Injection here
-│       ├── search.html           ← XSS + SQLi here
-│       ├── comments.html         ← Stored XSS here
+│       ├── login.html                ← SQL Injection vulnerability
+│       ├── search.html               ← Reflected XSS + SQL Injection
+│       ├── comments.html             ← Stored XSS vulnerability
 │       ├── dashboard.html
-│       └── admin.html            ← No auth here
+│       └── admin.html                ← No authentication at all
 │
-├── security_system/              ← PHASE 2-4: The AI agent system
-│   ├── config.py                 ← Loads .env, sets constants
-│   ├── models.py                 ← Pydantic schemas shared between agents
-│   ├── orchestrator.py           ← Coordinates all 4 agents
+├── security_system/                  ← The multi-agent AI system
+│   ├── config.py                     ← Loads .env, sets Gemini model name
+│   ├── models.py                     ← Pydantic schemas: Endpoint, Vulnerability, ScanReport
+│   ├── ai_client.py                  ← Single file that talks to Gemini API
+│   ├── orchestrator.py               ← Runs all 4 agents in sequence
 │   └── agents/
-│       ├── crawler.py            ← Agent 1: Discovers endpoints
-│       ├── attacker.py           ← Agent 2: Generates + fires payloads (uses Claude)
-│       ├── analyzer.py           ← Agent 3: Confirms vulnerabilities (uses Claude)
-│       └── reporter.py           ← Agent 4: Writes the report (uses Claude)
+│       ├── crawler.py                ← Agent 1: Spiders the app, finds all routes
+│       ├── attacker.py               ← Agent 2: Asks Gemini for payloads, fires them
+│       ├── analyzer.py               ← Agent 3: Asks Gemini if responses = vulnerabilities
+│       └── reporter.py               ← Agent 4: Asks Gemini to write the full report
 │
 ├── api/
-│   └── main.py                   ← FastAPI server: POST /scan triggers the pipeline
+│   └── main.py                       ← FastAPI server — POST /scan runs everything
 │
-└── reports/                      ← Auto-created. Scan reports saved here
-    ├── report_2024-01-01_...md
-    └── report_2024-01-01_...json
+└── reports/                          ← Auto-created after first scan
+    ├── report_2024-xx-xx.md          ← Human-readable Markdown report
+    └── report_2024-xx-xx.json        ← Machine-readable JSON report
 ```
 
 ---
 
-## ⚙️ Setup
+## ⚙️ First Time Setup
 
-### Step 1 — Clone / download the project
+### Step 1 — Get your FREE Gemini API key
 
-```bash
-cd Desktop
-# If you used git:
-# git clone <your-repo>
-# cd security_project
+1. Go to **https://aistudio.google.com**
+2. Click **"Get API Key"**
+3. Click **"Create API Key"**
+4. Copy the key (starts with `AIzaSy...`)
 
-# Or just navigate to the folder:
-cd security_project
+No credit card. No payment. Completely free. 1,500 requests/day.
+
+---
+
+### Step 2 — Add your key to the .env file
+
+Open `security_project/.env` in any text editor (Notepad, VS Code, etc.) and replace:
+
+```
+GEMINI_API_KEY=your-gemini-key-here
 ```
 
-### Step 2 — Create a virtual environment
+with your real key:
+
+```
+GEMINI_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
+⚠️ Never share this key. Never commit it to GitHub. The `.gitignore` already protects it.
+
+---
+
+### Step 3 — Create virtual environment and install dependencies
+
+Open **Git Bash** or terminal inside the `security_project` folder and run:
 
 ```bash
-# Windows
+# Create the virtual environment
 python -m venv venv
-venv\Scripts\activate
 
-# Mac / Linux
-python3 -m venv venv
-source venv/bin/activate
-```
+# Activate it (Git Bash on Windows)
+source venv/Scripts/activate
 
-### Step 3 — Install dependencies
+# You should now see (venv) at the start of your prompt
 
-```bash
+# Install all packages
 pip install -r requirements.txt
 ```
 
-### Step 4 — Add your Anthropic API key
-
-Open the `.env` file in any text editor and replace the placeholder:
-
-```
-ANTHROPIC_API_KEY=sk-ant-your-real-key-here
-```
-
-👉 Get your key at: https://console.anthropic.com  
-👉 **Never share your API key or commit it to GitHub.**
+> **Every time you open a new terminal, run `source venv/Scripts/activate` first.**
 
 ---
 
@@ -96,219 +123,261 @@ You need **two terminal windows** open at the same time.
 
 ---
 
-### Terminal 1 — Start the Vulnerable Target App
+### Terminal 1 — Start the Vulnerable Target App (port 9999)
 
 ```bash
-# Make sure your venv is activated first
 cd security_project
-
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux  
-source venv/bin/activate
-
-# Run the vulnerable app on port 9999
+source venv/Scripts/activate
 uvicorn vulnerable_app.main:app --port 9999 --reload
 ```
 
-You should see:
+Expected output:
 ```
 INFO:     Uvicorn running on http://127.0.0.1:9999
 [DB] Database initialised at vulnerable_app.db
-[APP] Vulnerable app is running
+[APP] Vulnerable app is running — DO NOT expose to the internet!
+INFO:     Application startup complete.
 ```
 
-Open your browser → http://localhost:9999 to confirm it's working.  
-Try logging in with: `admin' --` as username, anything as password.
+✅ Open **http://localhost:9999** in your browser to confirm it works.
 
 ---
 
-### Terminal 2 — Start the Security Testing API
+### Terminal 2 — Start the Security Testing API (port 8000)
 
 ```bash
-# Open a NEW terminal window
 cd security_project
-
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux
-source venv/bin/activate
-
-# Run the security API on port 8000
+source venv/Scripts/activate
 uvicorn api.main:app --port 8000 --reload
 ```
 
-You should see:
+Expected output:
 ```
 INFO:     Uvicorn running on http://127.0.0.1:8000
+INFO:     Application startup complete.
 ```
+
+✅ Open **http://localhost:8000/docs** in your browser to confirm it works.
 
 ---
 
-## 🧪 Running a Scan
+## 🧪 Running an AI Security Scan
 
-### Option A — Use the browser (Swagger UI)
+### Option A — Swagger UI (easiest, recommended)
 
-Open: http://localhost:8000/docs
-
-1. Click `POST /scan` → `Try it out`
-2. Paste this body:
+1. Open **http://localhost:8000/docs**
+2. Click **`POST /scan`**
+3. Click **"Try it out"**
+4. Paste this into the request body box:
 ```json
 {
   "target_url": "http://localhost:9999",
   "background": false
 }
 ```
-3. Click **Execute**
-4. Watch the terminal output as agents run
-5. Get the full report in the response
+5. Click **Execute**
+6. Watch **both terminals** — you'll see agents printing live progress
+7. Scroll down to see the full security report in the response
+
+The scan takes **2–4 minutes**. You'll see output like:
+```
+[CRAWLER] Starting crawl on: http://localhost:9999
+[CRAWLER] Found 12 unique endpoints
+
+[ATTACKER] Testing: GET http://localhost:9999/search
+[ATTACKER]   Gemini generated 5 payloads for 'q'
+
+[ANALYZER] Analysing 47 payload results with Gemini...
+[ANALYZER]   ✓ [CRITICAL] SQL Injection in Search
+
+[REPORTER] ✅ Markdown report → reports/report_2024-xx-xx.md
+```
 
 ---
 
-### Option B — Use curl
+### Option B — curl (from terminal)
 
 ```bash
 curl -X POST "http://localhost:8000/scan" \
   -H "Content-Type: application/json" \
-  -d '{"target_url": "http://localhost:9999", "background": false}'
+  -d "{\"target_url\": \"http://localhost:9999\", \"background\": false}"
 ```
 
 ---
 
-### Option C — Use Python
-
-```python
-import requests
-
-response = requests.post(
-    "http://localhost:8000/scan",
-    json={"target_url": "http://localhost:9999", "background": False}
-)
-
-report = response.json()
-print(f"Found {report['vulnerability_count']} vulnerabilities")
-for v in report['vulnerabilities']:
-    print(f"  [{v['severity']}] {v['title']} — {v['endpoint']}")
-```
-
----
-
-### Option D — Background scan (non-blocking)
+### Option C — Background scan (returns immediately, poll for results)
 
 ```bash
-# Start scan, get job_id immediately
+# Start scan — returns job_id right away
 curl -X POST "http://localhost:8000/scan" \
   -H "Content-Type: application/json" \
-  -d '{"target_url": "http://localhost:9999", "background": true}'
+  -d "{\"target_url\": \"http://localhost:9999\", \"background\": true}"
 
-# Returns: {"job_id": "abc123", "message": "..."}
+# Returns: {"job_id": "abc12345", "status": "pending", ...}
 
-# Poll for status
-curl "http://localhost:8000/scan/abc123"
+# Check status
+curl "http://localhost:8000/scan/abc12345"
 ```
 
 ---
 
-## 📋 Viewing Reports
+## 📋 Viewing Saved Reports
 
-Reports are automatically saved in the `reports/` folder as both `.md` and `.json`.
+After a scan, reports are saved in the `reports/` folder automatically.
 
 ```bash
-# List all saved reports
+# List all reports via API
 curl http://localhost:8000/reports
 
 # Download a specific report
 curl http://localhost:8000/reports/report_2024-01-01_12-00-00.md
 ```
 
-Or just open the `reports/` folder — the `.md` files are readable in VS Code or any Markdown viewer.
+Or just open the `reports/` folder in File Explorer — the `.md` files open nicely in **VS Code** (install the Markdown Preview extension).
 
 ---
 
-## 🐛 Vulnerabilities Built Into the Target App
+## 🐛 8 Vulnerabilities Built Into the Target App
 
-| # | Vulnerability | Endpoint | How to test manually |
-|---|---------------|----------|----------------------|
-| 1 | SQL Injection | `POST /login` | Username: `admin' --` |
+| # | Type | Endpoint | How to test manually |
+|---|------|----------|----------------------|
+| 1 | SQL Injection | `POST /login` | Username: `admin' --` · Password: `anything` |
 | 2 | SQL Injection | `GET /search?q=` | Query: `' UNION SELECT username,password,role,email,id FROM users --` |
 | 3 | Reflected XSS | `GET /search?q=` | Query: `<script>alert('XSS')</script>` |
-| 4 | Stored XSS | `POST /comments` | Comment body: `<img src=x onerror=alert('Stored XSS')>` |
-| 5 | Broken Auth | `GET /admin` | Just visit the URL — no login needed |
-| 6 | Sensitive Data | `GET /api/users` | Returns all users + plaintext passwords |
-| 7 | IDOR | `GET /api/users/{id}` | Change the ID number — no ownership check |
-| 8 | Path Traversal | `GET /files?filename=` | filename: `../vulnerable_app/database.py` |
+| 4 | Stored XSS | `POST /comments` | Comment: `<img src=x onerror=alert('Stored XSS')>` |
+| 5 | Broken Authentication | `GET /admin` | Just visit the URL — no password needed |
+| 6 | Sensitive Data Exposure | `GET /api/users` | Returns all users with plaintext passwords |
+| 7 | IDOR | `GET /api/users/{id}` | Change the number — sees anyone's data |
+| 8 | Path Traversal | `GET /files?filename=` | `../vulnerable_app/database.py` reads source code |
 
 ---
 
-## 🏗️ How the Agents Work
+## 🏗️ How the 4 AI Agents Work
 
 ```
-User sends POST /scan
-        ↓
-  Orchestrator starts
-        ↓
-  ┌─ CrawlerAgent ──────────────────────────────────────────┐
-  │  Uses requests + BeautifulSoup                          │
-  │  Spiders all links, parses all forms                    │
-  │  Probes common paths (/admin, /api/users, /files...)    │
-  │  Returns: list of Endpoint objects                      │
-  └─────────────────────────────────────────────────────────┘
-        ↓
-  ┌─ AttackerAgent ─────────────────────────────────────────┐
-  │  For each endpoint + parameter:                         │
-  │    → Asks Claude: "Generate payloads for this input"    │
-  │    → Fires each payload using requests                  │
-  │    → Records raw HTTP response                          │
-  │  Returns: list of PayloadResult objects                 │
-  └─────────────────────────────────────────────────────────┘
-        ↓
-  ┌─ AnalyzerAgent ─────────────────────────────────────────┐
-  │  Groups results by endpoint + parameter                 │
-  │  For each group:                                        │
-  │    → Sends payload + response to Claude                 │
-  │    → Asks: "Is this a real vulnerability?"              │
-  │    → Claude returns structured JSON findings            │
-  │  Returns: list of Vulnerability objects                 │
-  └─────────────────────────────────────────────────────────┘
-        ↓
-  ┌─ ReporterAgent ─────────────────────────────────────────┐
-  │  Asks Claude for executive summary + recommendations    │
-  │  Builds professional Markdown report                    │
-  │  Saves .md and .json files to /reports/                 │
-  │  Returns: ScanReport object                             │
-  └─────────────────────────────────────────────────────────┘
-        ↓
-  Full report returned via API
+You → POST /scan → Orchestrator
+                        │
+                        ▼
+        ┌─────────────────────────────────────┐
+        │  AGENT 1: CrawlerAgent              │
+        │  Tool: requests + BeautifulSoup     │
+        │  • Visits every link on the site    │
+        │  • Parses all HTML forms            │
+        │  • Probes /admin, /api, /files...   │
+        │  Output: list of Endpoints          │
+        └──────────────┬──────────────────────┘
+                       │
+                       ▼
+        ┌─────────────────────────────────────┐
+        │  AGENT 2: AttackerAgent             │
+        │  Tool: Gemini AI + requests         │
+        │  • Asks Gemini: what payloads to    │
+        │    try on this specific parameter?  │
+        │  • Fires every payload via HTTP     │
+        │  • Records every response           │
+        │  Output: list of PayloadResults     │
+        └──────────────┬──────────────────────┘
+                       │
+                       ▼
+        ┌─────────────────────────────────────┐
+        │  AGENT 3: AnalyzerAgent             │
+        │  Tool: Gemini AI                    │
+        │  • Sends payload + response to AI  │
+        │  • Asks: is this a real vuln?       │
+        │  • AI returns structured findings  │
+        │  Output: list of Vulnerabilities   │
+        └──────────────┬──────────────────────┘
+                       │
+                       ▼
+        ┌─────────────────────────────────────┐
+        │  AGENT 4: ReporterAgent             │
+        │  Tool: Gemini AI                    │
+        │  • Asks AI for executive summary    │
+        │  • Builds professional Markdown     │
+        │  • Saves .md and .json to disk      │
+        │  Output: ScanReport                 │
+        └──────────────┬──────────────────────┘
+                       │
+                       ▼
+              Full report returned
 ```
+
+**Why no LangChain?** Each agent is a plain Python class that calls `call_ai()` from `ai_client.py`. No framework magic — every line is readable and explainable in interviews.
 
 ---
 
 ## 🔧 Troubleshooting
 
-**"ANTHROPIC_API_KEY not set" error**
-→ Open `.env` and add your real key from https://console.anthropic.com
+**`uvicorn: command not found`**
+```bash
+source venv/Scripts/activate   # activate the venv first
+```
 
-**"Could not reach target" error**
-→ Make sure Terminal 1 (vulnerable app on port 9999) is running first
+**`GEMINI_API_KEY not set` error**
+```
+→ Open .env and paste your key from https://aistudio.google.com
+```
 
-**"ModuleNotFoundError"**
-→ Make sure your venv is activated: `venv\Scripts\activate` (Windows)
+**`ModuleNotFoundError: No module named 'fastapi'`**
+```bash
+source venv/Scripts/activate
+pip install -r requirements.txt
+```
 
-**Scan takes too long**
-→ Claude API calls take 2-5 seconds each. A full scan takes ~2-4 minutes.
+**`Could not reach http://localhost:9999`**
+```
+→ Terminal 1 must be running the vulnerable app first
+→ Check that you see "Application startup complete" in Terminal 1
+```
 
-**Port already in use**
-→ Change port: `uvicorn api.main:app --port 8001`
+**`Address already in use` on port 8000 or 9999**
+```bash
+uvicorn api.main:app --port 8001 --reload          # use a different port
+uvicorn vulnerable_app.main:app --port 9998 --reload
+```
+
+**Scan takes too long / Gemini timeout**
+```
+→ Gemini free tier: 15 requests/minute
+→ A full scan fires ~50 API calls — takes 3-5 minutes, this is normal
+→ Watch the terminal to see live progress
+```
+
+**Verify everything is working**
+```bash
+python test_setup.py
+```
+
+---
+
+## 🤖 AI Stack
+
+| Component | Technology | Cost |
+|-----------|-----------|------|
+| AI model | Google Gemini 1.5 Flash | **Free** (1,500 req/day) |
+| API client | `google-generativeai` Python SDK | Free |
+| Web framework | FastAPI | Free |
+| HTTP requests | `requests` library | Free |
+| HTML parsing | BeautifulSoup4 | Free |
+| Data validation | Pydantic v2 | Free |
+| Database | SQLite (built into Python) | Free |
 
 ---
 
 ## 📌 Resume Description
 
-> **AI-Powered Autonomous Security Testing System** | Python, FastAPI, Anthropic Claude API  
-> Built a multi-agent system where AI agents autonomously crawl a web application, generate context-aware attack payloads using Claude, analyse HTTP responses to confirm vulnerabilities, and produce professional security reports. Agents communicate via Pydantic schemas; no LangChain used. Tested against a custom-built vulnerable FastAPI application including SQL injection, XSS, IDOR, and path traversal vulnerabilities.
+**AI-Powered Autonomous Security Testing System** | Python · FastAPI · Google Gemini AI · Multi-Agent
+
+Built a multi-agent security testing system where four AI agents autonomously collaborate to perform end-to-end penetration testing. The Crawler Agent spiders a target web application using BeautifulSoup to map all endpoints and form inputs. The Attacker Agent uses Gemini AI to generate context-aware payloads for SQL injection, XSS, path traversal, and IDOR attacks, then fires them via HTTP. The Analyzer Agent sends responses back to Gemini to confirm real vulnerabilities. The Reporter Agent generates a professional Markdown security report with CVSS scores and remediation steps. All agents communicate through Pydantic schemas with no LangChain dependency. Tested against a custom-built intentionally vulnerable FastAPI application with 8 real vulnerability classes.
 
 ---
 
-*⚠️ This project is for educational purposes only. Never test applications you don't own.*
+## ⚠️ Disclaimer
+
+This project is for **educational and portfolio purposes only**.  
+The vulnerable app is intentionally insecure — never deploy it on a public server.  
+Only test applications that you own and have permission to test.
+
+---
+
+*Built with ❤️ for learning ethical security testing*
