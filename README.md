@@ -364,13 +364,7 @@ python test_setup.py
 
 ---
 
-## 📌 Resume Description
 
-**AI-Powered Autonomous Security Testing System** | Python · FastAPI · Google Gemini AI · Multi-Agent
-
-Built a multi-agent security testing system where four AI agents autonomously collaborate to perform end-to-end penetration testing. The Crawler Agent spiders a target web application using BeautifulSoup to map all endpoints and form inputs. The Attacker Agent uses Gemini AI to generate context-aware payloads for SQL injection, XSS, path traversal, and IDOR attacks, then fires them via HTTP. The Analyzer Agent sends responses back to Gemini to confirm real vulnerabilities. The Reporter Agent generates a professional Markdown security report with CVSS scores and remediation steps. All agents communicate through Pydantic schemas with no LangChain dependency. Tested against a custom-built intentionally vulnerable FastAPI application with 8 real vulnerability classes.
-
----
 
 ## ⚠️ Disclaimer
 
